@@ -10,7 +10,7 @@ public class FillTheGapsApplication {
         long itemId = 12L;
 
         long start = System.currentTimeMillis();
-        double min = priceAggregator.getMinPriceByAnyOf(itemId);
+        double min = priceAggregator.getMinPrice(itemId);
         long end = System.currentTimeMillis();
 
         System.out.println(min);
