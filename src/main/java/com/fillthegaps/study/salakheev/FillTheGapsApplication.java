@@ -14,6 +14,7 @@ public class FillTheGapsApplication {
         long end = System.currentTimeMillis();
 
         System.out.println(min);
+        System.out.println(end - start);
         System.out.println((end - start) < 3000); // should be true
     }
 }
