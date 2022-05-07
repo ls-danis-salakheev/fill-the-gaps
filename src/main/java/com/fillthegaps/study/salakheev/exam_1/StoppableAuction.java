@@ -13,8 +13,7 @@ public class StoppableAuction extends OptimisticAuction {
 
     @Override
     public boolean propose(Bid newBid) {
-        if (!open) return false;
-        return super.propose(newBid);
+        return open && super.propose(newBid);
     }
 
     public void stopAuction() {
