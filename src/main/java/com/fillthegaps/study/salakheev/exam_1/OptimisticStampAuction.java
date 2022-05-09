@@ -28,22 +28,21 @@ public class OptimisticStampAuction implements Proposing<OptimisticAuction.Bid> 
 
     private boolean writeLastBid(OptimisticAuction.Bid newBid) {
         long writeStamp = stampedLock.writeLock();
-        boolean res = false;
+        OptimisticAuction.Bid old;
         try {
-            final var old = this.lastBid;
-            if (newBid.price > old.price) {
-                this.lastBid = newBid;
-                notifier.sendOutdatedMessage(old);
-                res = true;
+            old = this.lastBid;
+            if (old.price > newBid.price) {
+                return false;
             }
+            this.lastBid = newBid;
         } finally {
             stampedLock.unlockWrite(writeStamp);
         }
-        return res;
+        notifier.sendOutdatedMessage(old);
+        return true;
     }
 
     public OptimisticAuction.Bid getLatestBid() {
         return lastBid;
     }
-
 }
