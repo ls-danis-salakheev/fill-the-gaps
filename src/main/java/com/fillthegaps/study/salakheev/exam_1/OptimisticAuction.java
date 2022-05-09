@@ -4,9 +4,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * @version 1.1
+ * @version 1.2
  */
-public class OptimisticAuction {
+public class OptimisticAuction implements Proposing<OptimisticAuction.Bid> {
 
     public static class Bid {
         Long id; // ID заявки
@@ -48,14 +48,13 @@ public class OptimisticAuction {
         this.atomicBidRef = new AtomicReference<>(new Bid(null, null, 0L));
     }
 
+    @Override
     public boolean propose(Bid newBid) {
-        Bid old;
-        do {
-            old = atomicBidRef.get();
-            if (old.price > newBid.price) {
-                return false;
-            }
-        } while (!atomicBidRef.compareAndSet(old, newBid));
+        Bid old = atomicBidRef.get();
+        if (getLatestBid().price > newBid.price
+                && !atomicBidRef.compareAndSet(old, newBid)) {
+            return false;
+        }
         notifier.sendOutdatedMessage(old);
         return true;
     }

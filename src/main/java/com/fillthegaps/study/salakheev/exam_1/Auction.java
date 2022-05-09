@@ -7,7 +7,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * @version 1.3
  */
-public class Auction {
+public class Auction implements Proposing<Auction.Bid> {
     public static class Bid {
         Long id; // ID заявки
         Long participantId; // ID участника
@@ -40,6 +40,7 @@ public class Auction {
         this.latestBid = new Bid(null, null, 0L);
     }
 
+    @Override
     public boolean propose(Bid bid) {
         Pair<Boolean, Bid> result = checkCandidateAndSet(bid);
         if (result.getFirst()) {
