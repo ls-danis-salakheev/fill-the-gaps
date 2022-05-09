@@ -19,14 +19,18 @@ public class StoppableAuction implements Proposing<OptimisticAuction.Bid> {
 
     @Override
     public boolean propose(OptimisticAuction.Bid newBid) {
+        if (!open) return false;
         OptimisticAuction.Bid old = atomicBidRef.get();
-        if (!open
-                && getLatestBid().price > newBid.price
-                && !atomicBidRef.compareAndSet(old, newBid)) {
+        if (getLatestBid().price > newBid.price
+                && !compareAndSet(newBid, old)) {
             return false;
         }
         notifier.sendOutdatedMessage(old);
         return true;
+    }
+
+    private boolean compareAndSet(OptimisticAuction.Bid newBid, OptimisticAuction.Bid old) {
+        return open && atomicBidRef.compareAndSet(old, newBid);
     }
 
     public OptimisticAuction.Bid getLatestBid() {
