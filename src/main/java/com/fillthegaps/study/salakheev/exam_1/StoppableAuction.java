@@ -1,9 +1,9 @@
 package com.fillthegaps.study.salakheev.exam_1;
 
 /**
- * @version 1.2
+ * @version 1.3
  */
-public class StoppableAuction extends OptimisticAuction {
+public class StoppableAuction extends OptimisticAuction implements Proposing<OptimisticAuction.Bid> {
 
     private volatile boolean open;
 
@@ -13,10 +13,14 @@ public class StoppableAuction extends OptimisticAuction {
 
     @Override
     public boolean propose(Bid newBid) {
-        return open && super.propose(newBid);
+        return isOpen() && super.propose(newBid);
     }
 
-    public void stopAuction() {
+    public synchronized void stopAuction() {
         this.open = false;
+    }
+
+    private synchronized boolean isOpen() {
+        return this.open;
     }
 }
