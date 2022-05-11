@@ -1,43 +1,39 @@
 package com.fillthegaps.study.salakheev.exam_1;
 
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicMarkableReference;
 
 /**
- * @version 1.4
+ * @version 1.5
  */
 public class StoppableAuction implements Proposing<OptimisticAuction.Bid> {
 
-    private volatile boolean open;
     private final OptimisticAuction.Notifier notifier;
-    private final AtomicReference<OptimisticAuction.Bid> atomicBidRef;
+    private final AtomicMarkableReference<OptimisticAuction.Bid> markableReference;
 
     public StoppableAuction() {
-        this.open = true;
         this.notifier = new OptimisticAuction.Notifier();
-        this.atomicBidRef = new AtomicReference<>(new OptimisticAuction.Bid(null, null, 0L));
+        this.markableReference = new AtomicMarkableReference<>(new OptimisticAuction.Bid(null, null, 0L), true);
     }
 
     @Override
     public boolean propose(OptimisticAuction.Bid newBid) {
-        if (!open) return false;
-        OptimisticAuction.Bid old = atomicBidRef.get();
-        if (getLatestBid().price > newBid.price
-                && !compareAndSet(newBid, old)) {
+        if (!markableReference.isMarked()) return false;
+        OptimisticAuction.Bid old = markableReference.getReference();
+        if (!markableReference.compareAndSet(old, newBid, true, true)) {
             return false;
         }
         notifier.sendOutdatedMessage(old);
         return true;
     }
 
-    private boolean compareAndSet(OptimisticAuction.Bid newBid, OptimisticAuction.Bid old) {
-        return open && atomicBidRef.compareAndSet(old, newBid);
-    }
-
     public OptimisticAuction.Bid getLatestBid() {
-        return atomicBidRef.get();
+        return markableReference.getReference();
     }
 
     public void stopAuction() {
-        this.open = false;
+        OptimisticAuction.Bid last;
+        do {
+            last = markableReference.getReference();
+        } while (markableReference.compareAndSet(last, last, true, false));
     }
 }
