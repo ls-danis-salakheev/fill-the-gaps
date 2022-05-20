@@ -5,10 +5,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.CompletableFuture.runAsync;
 
 public class OrderService {
-
     private final ConcurrentHashMap<Long, Order> currentOrders = new ConcurrentHashMap<>();
 
     public long createOrder(List<Item> items) {
@@ -18,30 +18,27 @@ public class OrderService {
     }
 
     public void updatePaymentInfo(long cartId, PaymentInfo paymentInfo) {
-        currentOrders
-                .computeIfPresent(cartId, (c, o) -> {
-                    Order paidOrder = o.withPaymentInfo(paymentInfo);
-                    currentOrders.put(cartId, o.withPaymentInfo(paymentInfo));
-                    if (paidOrder.checkStatus()) {
-                        runAsync(() -> deliver(paidOrder));
-                        Order delivered = paidOrder.withStatus(Status.DELIVERED);
-                        currentOrders.put(delivered.getId(), delivered);
-                    }
-                    System.out.println("");
-                    return paidOrder;
+        Order paidOrder = currentOrders
+                .computeIfPresent(cartId, (id, order) -> {
+                    order.setPaymentInfo(paymentInfo);
+                    return order;
                 });
+        if (requireNonNull(paidOrder).checkStatus()) {
+            runAsync(() -> deliver(paidOrder));
+            Order delivered = paidOrder.withStatus(Status.DELIVERED);
+            currentOrders.put(delivered.getId(), delivered);
+        }
     }
 
     public void setPacked(long cartId) {
-        currentOrders
-                .computeIfPresent(cartId, (c, o) -> {
-                    final Order packedOrder = o.withPacked();
-                    currentOrders.put(cartId, packedOrder);
-                    if (packedOrder.checkStatus()) {
-                        runAsync(() -> deliver(packedOrder));
-                    }
-                    return packedOrder;
+        Order packedOrder = currentOrders
+                .computeIfPresent(cartId, (id, order) -> {
+                    order.pack();
+                    return order;
                 });
+        if (requireNonNull(packedOrder).checkStatus()) {
+            runAsync(() -> deliver(packedOrder));
+        }
     }
 
     private void deliver(Order order) {

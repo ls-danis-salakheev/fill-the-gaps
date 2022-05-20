@@ -58,6 +58,18 @@ public class Order {
     public List<Item> getItems() {
         return unmodifiableList(items);
     }
+
+    void setPaymentInfo(PaymentInfo paymentInfo) {
+        this.paymentInfo = paymentInfo;
+    }
+
+    void pack() {
+        this.isPacked = true;
+    }
+
+    void setStatus(Status status) {
+        this.status = status;
+    }
 }
 
 @Value
