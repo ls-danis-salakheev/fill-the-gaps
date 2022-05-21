@@ -38,16 +38,16 @@ public class Order {
         this.status = status;
     }
 
-    public Order withStatus(Status status, ConcurrentHashMap<Long, Order> orders) {
-        return orders.put(this.id, new Order(this.id, this.items, this.paymentInfo, this.isPacked, status));
+    public Order withStatus(Status status) {
+        return new Order(this.id, this.items, this.paymentInfo, this.isPacked, status);
     }
 
-    public Order withPaymentInfo(PaymentInfo paymentInfo, ConcurrentHashMap<Long, Order> orders) {
-        return orders.put(this.id, new Order(this.id, this.items, paymentInfo, this.isPacked, this.status));
+    public Order withPaymentInfo(PaymentInfo paymentInfo) {
+        return new Order(this.id, this.items, paymentInfo, this.isPacked, this.status);
     }
 
-    public Order withPacked(ConcurrentHashMap<Long, Order> orders) {
-        return orders.put(this.id, new Order(this.id, this.items, this.paymentInfo, true, this.status));
+    public Order doPack() {
+        return new Order(this.id, this.items, this.paymentInfo, true, this.status);
     }
 
     public boolean checkStatus() {

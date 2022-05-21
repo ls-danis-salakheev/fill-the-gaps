@@ -1,11 +1,10 @@
 package com.fillthegaps.study.salakheev.immutable;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static java.util.Collections.*;
+import static java.util.Collections.unmodifiableMap;
 import static java.util.concurrent.CompletableFuture.runAsync;
 
 public class OrderService {
@@ -19,17 +18,18 @@ public class OrderService {
     }
 
     public void updatePaymentInfo(long cartId, PaymentInfo paymentInfo) {
-        currentOrders.get(cartId).withPaymentInfo(paymentInfo, currentOrders);
-        if (currentOrders.get(cartId).checkStatus()) {
-            final Order order = currentOrders.get(cartId);
-            runAsync(() -> deliver(order));
-            order.withStatus(Status.DELIVERED, currentOrders);
+        final Order paid = currentOrders
+                .computeIfPresent(cartId, (id, order) -> order.withPaymentInfo(paymentInfo));
+        if (paid.checkStatus()) {
+            runAsync(() -> deliver(paid));
+            currentOrders.put(cartId, paid.withStatus(Status.DELIVERED));
         }
     }
 
     public void setPacked(long cartId) {
-        currentOrders.get(cartId).withPacked(currentOrders);
-        if (currentOrders.get(cartId).checkStatus()) {
+        final Order packed = currentOrders
+                .computeIfPresent(cartId, (id, order) -> order.doPack());
+        if (packed.checkStatus()) {
             runAsync(() -> deliver(currentOrders.get(cartId)));
         }
     }
