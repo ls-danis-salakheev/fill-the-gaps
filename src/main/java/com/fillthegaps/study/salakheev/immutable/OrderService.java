@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static java.util.Collections.unmodifiableList;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.concurrent.CompletableFuture.runAsync;
 
@@ -12,7 +13,7 @@ public class OrderService {
     private final ConcurrentHashMap<Long, Order> currentOrders = new ConcurrentHashMap<>();
 
     public long createOrder(List<Item> items) {
-        Order order = new Order(items);
+        Order order = new Order(unmodifiableList(items));
         currentOrders.put(order.getId(), order);
         return order.getId();
     }
