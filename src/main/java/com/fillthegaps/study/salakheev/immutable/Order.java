@@ -1,19 +1,22 @@
 package com.fillthegaps.study.salakheev.immutable;
 
 import lombok.Getter;
-import lombok.Setter;
 import lombok.Value;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.LongAdder;
 
+import static com.fillthegaps.study.salakheev.immutable.Status.CREATED;
+import static com.fillthegaps.study.salakheev.immutable.Status.DELIVERED;
 import static java.util.Collections.unmodifiableList;
 
 @Getter
-@Setter
 public class Order {
 
+    private static final Status CHECKABLE_STATUS = DELIVERED;
     private static final LongAdder nextId = new LongAdder();
+
     private final Long id;
     private final List<Item> items;
     private PaymentInfo paymentInfo;
@@ -22,7 +25,7 @@ public class Order {
 
     public Order(List<Item> items) {
         this.items = items;
-        this.status = Status.CREATED;
+        this.status = CREATED;
         nextId.increment();
         this.id = nextId.longValue();
     }
@@ -35,21 +38,21 @@ public class Order {
         this.status = status;
     }
 
-    public Order withStatus(Status status) {
-        return new Order(this.id, this.items, this.paymentInfo, this.isPacked, status);
+    public Order withStatus(Status status, ConcurrentHashMap<Long, Order> orders) {
+        return orders.put(this.id, new Order(this.id, this.items, this.paymentInfo, this.isPacked, status));
     }
 
-    public Order withPaymentInfo(PaymentInfo paymentInfo) {
-        return new Order(this.id, this.items, paymentInfo, this.isPacked, this.status);
+    public Order withPaymentInfo(PaymentInfo paymentInfo, ConcurrentHashMap<Long, Order> orders) {
+        return orders.put(this.id, new Order(this.id, this.items, paymentInfo, this.isPacked, this.status));
     }
 
-    public Order withPacked() {
-        return new Order(this.id, this.items, this.paymentInfo, true, this.status);
+    public Order withPacked(ConcurrentHashMap<Long, Order> orders) {
+        return orders.put(this.id, new Order(this.id, this.items, this.paymentInfo, true, this.status));
     }
 
     public boolean checkStatus() {
-        if (items != null && !items.isEmpty() && paymentInfo != null && isPacked) {
-            status = Status.DELIVERED;
+        if (status != CHECKABLE_STATUS && items != null && !items.isEmpty() && paymentInfo != null && isPacked) {
+            status = DELIVERED;
             return true;
         }
         return false;
@@ -57,18 +60,6 @@ public class Order {
 
     public List<Item> getItems() {
         return unmodifiableList(items);
-    }
-
-    void setPaymentInfo(PaymentInfo paymentInfo) {
-        this.paymentInfo = paymentInfo;
-    }
-
-    void pack() {
-        this.isPacked = true;
-    }
-
-    void setStatus(Status status) {
-        this.status = status;
     }
 }
 
