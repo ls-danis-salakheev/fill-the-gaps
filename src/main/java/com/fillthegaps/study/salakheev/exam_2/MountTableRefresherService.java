@@ -2,10 +2,7 @@ package com.fillthegaps.study.salakheev.exam_2;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.*;
 
 import static com.fillthegaps.study.salakheev.exam_2.Others.*;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -29,7 +26,7 @@ public class MountTableRefresherService {
     private ScheduledExecutorService clientCacheCleanerScheduler;
 
     public void serviceInit() {
-        long routerClientMaxLiveTime = 15L;
+        long routerClientMaxLiveTime = 1L;
         this.cacheUpdateTimeout = 10L;
         routerClientsCache = new Others.LoadingCache<>();
         routerStore.getCachedRecords().stream().map(RouterState::getAdminAddress)
@@ -107,20 +104,15 @@ public class MountTableRefresherService {
         List<CompletableFuture<MountTableRefresherThread>> futures = refreshThreads
                 .stream()
                 .map(thread -> CompletableFuture.supplyAsync(() -> {
-                    thread.start();
+                    thread.refresh();
                     return thread;
-                }))
-                .collect(toUnmodifiableList());
+                })).collect(toUnmodifiableList());
         CompletableFuture
                 .allOf(futures.toArray(CompletableFuture<?>[]::new))
                 .orTimeout(cacheUpdateTimeout, MILLISECONDS)
-                .handle((res, ex) -> {
-                    if (ex != null) {
-                        System.out.println("Not all router admins updated their cache");
-                    }
-                    return res;
-                }).thenApply(res -> futures.stream()
+                .thenApply(res -> futures.stream()
                         .map(CompletableFuture::join)
+                        .filter(t -> !t.isSuccess())
                         .collect(toUnmodifiableList())
                 ).whenComplete((res, thr) -> {
                     if (thr != null) {
@@ -128,8 +120,11 @@ public class MountTableRefresherService {
                         if (cause instanceof InterruptedException) {
                             System.out.println("Mount table cache refresher was interrupted.");
                         }
+                        if (cause instanceof TimeoutException) {
+                            System.out.println("Not all router admins updated their cache");
+                        }
                     }
-                }).thenRun(() -> logResult(refreshThreads))
+                }).thenAccept(res -> logResult(res, futures.size()))
                 .join();
     }
 
@@ -137,21 +132,13 @@ public class MountTableRefresherService {
         return adminAddress.contains("local");
     }
 
-    private void logResult(List<MountTableRefresherThread> refreshThreads) {
-        int successCount = 0;
-        int failureCount = 0;
-        for (MountTableRefresherThread mountTableRefreshThread : refreshThreads) {
-            if (mountTableRefreshThread.isSuccess()) {
-                successCount++;
-            } else {
-                failureCount++;
-                // remove RouterClient from cache so that new client is created
-                removeFromCache(mountTableRefreshThread.getAdminAddress());
-            }
-        }
-        System.out.println(String.format(
-                "Mount table entries cache refresh successCount=%d,failureCount=%d",
-                successCount, failureCount));
+    private void logResult(List<MountTableRefresherThread> failedList, int initSize) {
+        failedList
+                .forEach(f -> // remove RouterClient from cache so that new client is created
+                        removeFromCache(f.getAdminAddress()));
+        System.out.printf(
+                "Mount table entries cache refresh successCount=%d,failureCount=%d%n",
+                initSize - failedList.size(), failedList.size());
     }
 
     public static void main(String[] args) throws InterruptedException {

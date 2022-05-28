@@ -2,9 +2,9 @@ package com.fillthegaps.study.salakheev.exam_2;
 
 import static com.fillthegaps.study.salakheev.exam_2.Others.MountTableManager;
 
-public class MountTableRefresherThread extends Thread {
+public class MountTableRefresherThread {
 
-    private boolean success;
+    private volatile boolean success;
     /**
      * Admin server on which refreshed to be invoked.
      */
@@ -15,8 +15,6 @@ public class MountTableRefresherThread extends Thread {
                                      String adminAddress) {
         this.manager = manager;
         this.adminAddress = adminAddress;
-        setName("MountTableRefresh_" + adminAddress);
-        setDaemon(true);
     }
 
     /**
@@ -31,8 +29,7 @@ public class MountTableRefresherThread extends Thread {
      * cache locally it need not to make RPC call. But R1 will make RPC calls to
      * update cache on R2 and R3.
      */
-    @Override
-    public void run() {
+    public void refresh() {
         success = manager.refresh();
     }
 
